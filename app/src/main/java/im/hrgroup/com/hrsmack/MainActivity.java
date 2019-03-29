@@ -1,9 +1,10 @@
 package im.hrgroup.com.hrsmack;
 
-import android.support.annotation.UiThread;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -14,10 +15,11 @@ import org.jivesoftware.smack.chat2.ChatManager;
 import org.jivesoftware.smack.chat2.IncomingChatMessageListener;
 import org.jivesoftware.smack.chat2.OutgoingChatMessageListener;
 import org.jivesoftware.smack.packet.Message;
+import org.jivesoftware.smack.roster.RosterEntry;
 import org.jxmpp.jid.EntityBareJid;
-import org.jxmpp.jid.impl.JidCreate;
 
 import java.util.Calendar;
+import java.util.Set;
 
 import im.hrgroup.com.hrsmack.util.XMPPConnectionTools;
 
@@ -77,11 +79,10 @@ public class MainActivity extends AppCompatActivity{
             String content = sendContent.getText().toString();
 
             try {
-                sendChatMessage(to, content);
+                tools.sendChatMessage(to, content);
             } catch (Exception e) {
                 e.printStackTrace();
             }
-
         }
     };
 
@@ -107,16 +108,24 @@ public class MainActivity extends AppCompatActivity{
         }
     };
 
-    public void sendChatMessage(String receive, String body) throws Exception {
-        //接收人jid
-        EntityBareJid jid = JidCreate.entityBareFrom(receive);
-        //获取聊天chat
-        Chat chat = chatManager.chatWith(jid);
 
-        //创建消息对象，消息类型是Message.Type.chat
-        Message message = new Message(jid, Message.Type.chat);
-        message.setBody(body);
-        //发送消息
-        chat.send(message);
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        menu.addSubMenu(R.string.friends);
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getOrder() == 0) {
+            Set<RosterEntry> friends = tools.getFriends();
+            Log.d("","---------------\r");
+            for (RosterEntry friend : friends) {
+                Log.d("你的好友"," name = "+friend);
+            }
+            Log.d("","---------------\n");
+        }
+
+        return super.onOptionsItemSelected(item);
     }
 }

@@ -1,6 +1,7 @@
 package im.hrgroup.com.hrsmack;
 
 import android.app.Application;
+import android.util.Log;
 
 import im.hrgroup.com.hrsmack.util.XMPPConnectionTools;
 
@@ -18,5 +19,13 @@ public class HRApplication extends Application {
 
     public void setXmpp(XMPPConnectionTools xmpp) {
         this.xmpp = xmpp;
+    }
+
+    @Override
+    public void onTerminate() {
+        xmpp.clear();
+
+        Log.d("HRApplication", "terminate need clear");
+        super.onTerminate();
     }
 }
