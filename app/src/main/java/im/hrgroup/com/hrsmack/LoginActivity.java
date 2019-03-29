@@ -60,7 +60,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
 
     // UI references.
     private AutoCompleteTextView mEmailView;
-    private EditText mPasswordView;
+    private EditText mPasswordView, domainView;
     private View mProgressView;
     private View mLoginFormView;
 
@@ -71,7 +71,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         // Set up the login form.
         mEmailView = (AutoCompleteTextView) findViewById(R.id.email);
         populateAutoComplete();
-
+        domainView = (EditText) findViewById(R.id.domain);
         mPasswordView = (EditText) findViewById(R.id.password);
         mPasswordView.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
@@ -151,15 +151,22 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         }
 
         // Reset errors.
+        domainView.setError(null);
         mEmailView.setError(null);
         mPasswordView.setError(null);
 
         // Store values at the time of the login attempt.
         String email = mEmailView.getText().toString();
         String password = mPasswordView.getText().toString();
+        String domain = domainView.getText().toString();
 
         boolean cancel = false;
         View focusView = null;
+        if (TextUtils.isEmpty(domain)) {
+            domainView.setError(getString(R.string.error_domain));
+            focusView = domainView;
+            cancel = true;
+        }
 
         // Check for a valid password, if the user entered one.
         if (!TextUtils.isEmpty(password) && !isPasswordValid(password)) {
@@ -188,7 +195,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
             // Show a progress spinner, and kick off a background task to
             // perform the user login attempt.
             showProgress(true);
-            mAuthTask = new UserLoginTask(email, password);
+            mAuthTask = new UserLoginTask(email, password, domain);
             mAuthTask.execute((Void) null);
         }
     }
@@ -301,17 +308,19 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
 
         private final String mEmail;
         private final String mPassword;
+        private final  String domain;
 
-        UserLoginTask(String email, String password) {
+        UserLoginTask(String email, String password, String domain) {
             mEmail = email;
             mPassword = password;
+            this.domain = domain;
         }
 
         @Override
         protected Boolean doInBackground(Void... params) {
             XMPPConnectionTools tools = XMPPConnectionTools.getInstance();
             ((HRApplication)getApplication()).setXmpp(tools);
-            return tools.loginOpenFire(mEmail,mPassword,"192.168.0.236");
+            return tools.loginOpenFire(mEmail,mPassword,domain);
         }
 
         @Override
@@ -324,8 +333,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
                 Toast.makeText(getApplicationContext(),"登录到openfire成功",Toast.LENGTH_LONG).show();
                 finish();
             } else {
-                mPasswordView.setError(getString(R.string.error_incorrect_password));
-                mPasswordView.requestFocus();
+                Toast.makeText(getApplicationContext(),"登录到openfire失败",Toast.LENGTH_LONG).show();
             }
         }
 
