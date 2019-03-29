@@ -309,9 +309,9 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
 
         @Override
         protected Boolean doInBackground(Void... params) {
-            XMPPConnectionTools tools = XMPPConnectionTools.getInstance(mEmail,mPassword,"192.168.0.236");
+            XMPPConnectionTools tools = XMPPConnectionTools.getInstance();
             ((HRApplication)getApplication()).setXmpp(tools);
-            return tools.loginOpenFire();
+            return tools.loginOpenFire(mEmail,mPassword,"192.168.0.236");
         }
 
         @Override

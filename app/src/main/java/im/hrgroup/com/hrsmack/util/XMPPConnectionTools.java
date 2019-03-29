@@ -4,7 +4,6 @@ import android.support.annotation.Nullable;
 import android.util.Log;
 
 import org.jivesoftware.smack.ConnectionConfiguration;
-import org.jivesoftware.smack.PacketListener;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.StanzaListener;
 import org.jivesoftware.smack.XMPPConnection;
@@ -13,11 +12,7 @@ import org.jivesoftware.smack.chat2.Chat;
 import org.jivesoftware.smack.chat2.ChatManager;
 import org.jivesoftware.smack.filter.IQTypeFilter;
 import org.jivesoftware.smack.filter.MessageTypeFilter;
-import org.jivesoftware.smack.filter.PacketFilter;
-import org.jivesoftware.smack.filter.StanzaFilter;
-import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Message;
-import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.roster.Roster;
@@ -65,17 +60,15 @@ public class XMPPConnectionTools {
     private MultiUserChatManager multiUserChatManager;
 
 
-    private XMPPConnectionTools(String user, String password, String domain) {
-        this.user = user;
-        this.domain = domain;
-        this.password = password;
+    private XMPPConnectionTools() {
+
     }
 
-    public static XMPPConnectionTools getInstance(@Nullable String user, @Nullable String password,@Nullable String domain) {
+    public static XMPPConnectionTools getInstance() {
         if (instance == null) {
             synchronized (XMPPConnectionTools.class){
                 if (instance == null){
-                    instance = new XMPPConnectionTools(user,password,domain);
+                    instance = new XMPPConnectionTools();
                 }
             }
         }
@@ -87,13 +80,17 @@ public class XMPPConnectionTools {
      * 登录
      * @return
      */
-    public boolean loginOpenFire(){
+    public boolean loginOpenFire(String user, String password, String domain){
         try {
-            if (!getConnection().isConnected()) {
-                getConnection().connect();
-                getConnection().login(user, password);
-//                addPacketListener();
+            this.user = user;
+            this.password = password;
+            this.domain = domain;
+
+            if (getConnection().isConnected()) {
+                clear();
             }
+            getConnection().connect();
+            getConnection().login(user, password);
             return true;
         } catch (XMPPException e) {
             e.printStackTrace();
@@ -141,6 +138,7 @@ public class XMPPConnectionTools {
                     System.out.println("StanzaListener msg : "+headlineMessage.getBody().toString());
                 }
             }, MessageTypeFilter.HEADLINE);
+
         } catch (UnknownHostException e) {
             e.printStackTrace();
         } catch (XmppStringprepException e) {
@@ -263,12 +261,7 @@ public class XMPPConnectionTools {
      */
     public void clear() {
         if (connection.isConnected()) {
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    connection.disconnect();
-                }
-            }).start();
+            connection.disconnect();
         }
         connection = null;
     }
@@ -352,14 +345,10 @@ public class XMPPConnectionTools {
 
     /**
      * 发送群聊普通消息
-     * @param groupName group1@conference.192.168.0.236
+     * @param groupJid group1@conference.192.168.0.236
      * @param body
      */
-    public void sendChatGroupMessage(String groupName, String body) throws Exception {
-        //拼凑jid
-        String jid = fromJID(groupName);
-        //创建jid实体
-        EntityBareJid groupJid = JidCreate.entityBareFrom(jid);
+    public void sendChatGroupMessage(EntityBareJid groupJid, String body) throws Exception {
         //群管理对象
         MultiUserChatManager multiUserChatManager = MultiUserChatManager.getInstanceFor(connection);
         MultiUserChat multiUserChat = multiUserChatManager.getMultiUserChat(groupJid);
@@ -371,22 +360,16 @@ public class XMPPConnectionTools {
         return groupName + CONFERENCE + connection.getServiceName();
     }
 
-
     /**
      * 加入群聊会议室
-     * @param groupName
+     * @param  groupJid
      * @param nickName
      * @return
      * @throws Exception
      */
-    public MultiUserChat joinMultiUserChat(String groupName, String nickName) {
-        //群jid
-        String jid = fromJID(groupName);
-        //jid实体创建
-        EntityBareJid groupJid = null;
+    public MultiUserChat joinMultiUserChat(EntityBareJid groupJid, String nickName) {
         MultiUserChat multiUserChat = null;
         try {
-            groupJid = JidCreate.entityBareFrom(jid);
             //获取群管理对象
             MultiUserChatManager multiUserChatManager = MultiUserChatManager.getInstanceFor(connection);
             //通过群管理对象获取该群房间对象
@@ -396,9 +379,12 @@ public class XMPPConnectionTools {
             //只获取最后99条历史记录
             builder.requestMaxCharsHistory(99);
             MucEnterConfiguration mucEnterConfiguration = builder.build();
-            //加入群
-            multiUserChat.join(mucEnterConfiguration);
-
+            if (!multiUserChat.isJoined()) {
+                //加入群
+                multiUserChat.join(mucEnterConfiguration);
+            }else {
+                Log.d("joinRoomListener",""+"已经加入聊天室"+multiUserChat.getRoom().toString());
+            }
             Log.d("joinRoomListener",""+"加入聊天室"+multiUserChat.getRoom().toString());
 
         } catch (XMPPException.XMPPErrorException e) {
@@ -499,6 +485,11 @@ public class XMPPConnectionTools {
         if(multiUserChatManager == null){
             multiUserChatManager = MultiUserChatManager.getInstanceFor(getConnection());
         }
+        multiUserChatManager.setAutoJoinOnReconnect(true);
         return multiUserChatManager;
+    }
+
+    public String getUserName() {
+        return user;
     }
 }

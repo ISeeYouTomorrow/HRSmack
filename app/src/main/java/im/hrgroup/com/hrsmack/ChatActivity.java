@@ -19,23 +19,23 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ListAdapter;
 import android.widget.ListView;
-import android.widget.SimpleAdapter;
 import android.widget.TextView;
 
 import org.jivesoftware.smack.chat2.ChatManager;
-import org.jivesoftware.smack.roster.RosterEntry;
+import org.jivesoftware.smack.util.StringUtils;
 import org.jivesoftware.smackx.muc.MultiUserChat;
 import org.jxmpp.jid.EntityBareJid;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 import im.hrgroup.com.hrsmack.listener.HRChatMessageListener;
-import im.hrgroup.com.hrsmack.listener.HRMessageListener;
+import im.hrgroup.com.hrsmack.listener.HRRoomMessageListener;
 import im.hrgroup.com.hrsmack.util.HRCallBack;
+import im.hrgroup.com.hrsmack.util.HRChatRoom;
 import im.hrgroup.com.hrsmack.util.XMPPConnectionTools;
 
 public class ChatActivity extends Activity implements View.OnClickListener{
@@ -60,10 +60,10 @@ public class ChatActivity extends Activity implements View.OnClickListener{
     private static TextView msgView, roomMsgView;
     private StringBuilder sb = new StringBuilder();
 
-    private static StringBuilder roomSb = new StringBuilder();
-
     private static XMPPConnectionTools tools ;
     private ChatManager chatManager;
+    //已经加入的群聊
+    private static Map<String, HRChatRoom> joinedRooms = new WeakHashMap<>();
 
     private HRCallBack showChatMsg = new HRCallBack() {
         @Override
@@ -164,12 +164,11 @@ public class ChatActivity extends Activity implements View.OnClickListener{
 
 
         private ListView historyRooms;
-        private List<String> historyRoomData;
+        private List<EntityBareJid> historyRoomData = new ArrayList<>();
         private ArrayAdapter roomAdaper;
         private EditText roomName,roomUser,sendRoomMsg;
         private Button createRoomBtn,sendRoomMsgBtn;
-        private View roomChatShow;
-        private MultiUserChat currentMultiUserChat;
+        private HRChatRoom currentMultiUserChat;//当前选中的聊天室
 
         public PlaceholderFragment() {
         }
@@ -197,7 +196,6 @@ public class ChatActivity extends Activity implements View.OnClickListener{
                 });
             }
         };
-        private HRMessageListener messageListener = new HRMessageListener(roomSb, showRoomChatMsg);
 
         View.OnClickListener sendMsgListener = new View.OnClickListener() {
             @Override
@@ -222,6 +220,9 @@ public class ChatActivity extends Activity implements View.OnClickListener{
                 String rUser = roomUser.getText().toString();
                 List<String> users = new ArrayList<>();
                 String[] rus = rUser.split(";");
+                if (StringUtils.isEmpty(rName)) {
+                    return ;
+                }
                 if (rus != null && rus.length > 0) {
                     for (String s : rus) {
                         users.add(s);
@@ -229,12 +230,13 @@ public class ChatActivity extends Activity implements View.OnClickListener{
                 }
                 MultiUserChat room = tools.createChatRoom(rName, users, rName);
                 Log.d("createRoomListener", "创建聊天室成功:" + room);
-                room.addMessageListener(messageListener);
-                String currentRoomName = room.getRoom().toString();
-                currentMultiUserChat = room;
-                Log.d("currentRoomName", "当前聊天室的名称:" + currentRoomName);
-                roomChatShow.setVisibility(View.VISIBLE);
-                historyRoomData.add(currentRoomName);
+                HRChatRoom hrChatRoom = new HRChatRoom(room,new HRRoomMessageListener(showRoomChatMsg));
+                joinedRooms.put(room.getRoom().toString(), hrChatRoom);
+
+                String groupName = room.getRoom().toString();
+                currentMultiUserChat = hrChatRoom;
+                Log.d("currentRoomName", "当前聊天室的名称:" + groupName);
+                historyRoomData.add(room.getRoom());
                 roomAdaper.notifyDataSetChanged();
             }
         };
@@ -245,10 +247,12 @@ public class ChatActivity extends Activity implements View.OnClickListener{
         private View.OnClickListener sendRoomMsgListener = new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String groupName = roomName.getText().toString();
                 String msg = sendRoomMsg.getText().toString();
+                if (currentMultiUserChat == null) {
+                    return ;
+                }
                 try {
-                    tools.sendChatGroupMessage(groupName, msg);
+                    currentMultiUserChat.sendMsg(tools,msg);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -258,10 +262,16 @@ public class ChatActivity extends Activity implements View.OnClickListener{
         private AdapterView.OnItemLongClickListener joinRoomListener = new AdapterView.OnItemLongClickListener(){
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-                String groupName = historyRoomData.get(position).split("@")[0];
-                MultiUserChat multiUserChat = tools.joinMultiUserChat(groupName,"小猪快跑");
-                multiUserChat.addMessageListener(messageListener);
-                currentMultiUserChat = multiUserChat;
+                EntityBareJid groupJid = historyRoomData.get(position);
+                String group = groupJid.toString();
+                if (joinedRooms.containsKey(groupJid.toString()) && tools.getConnection().isConnected()) {
+                    currentMultiUserChat = joinedRooms.get(group);
+                }else{
+                    MultiUserChat multiUserChat = tools.joinMultiUserChat(groupJid, tools.getUserName());
+                    HRChatRoom chatRoom = new HRChatRoom(multiUserChat, new HRRoomMessageListener(showRoomChatMsg));
+                    joinedRooms.put(group, chatRoom);
+                    currentMultiUserChat = chatRoom;
+                }
                 return false;
             }
         };
@@ -288,7 +298,6 @@ public class ChatActivity extends Activity implements View.OnClickListener{
                     roomName = rootView.findViewById(R.id.roomName);
                     createRoomBtn = rootView.findViewById(R.id.createRoomBtn);
                     createRoomBtn.setOnClickListener(createRoomListener);
-                    roomChatShow = rootView.findViewById(R.id.roomChatShow);
                     sendRoomMsgBtn = rootView.findViewById(R.id.sendRoomMsgBtn);
                     sendRoomMsgBtn.setOnClickListener(sendRoomMsgListener);
                     sendRoomMsg = rootView.findViewById(R.id.room_send_msg);
@@ -302,20 +311,18 @@ public class ChatActivity extends Activity implements View.OnClickListener{
 
         private AsyncTask roomTask = new AsyncTask() {
             @Override
-            protected Object doInBackground(Object[] objects) {
-                List<EntityBareJid> rooms = tools.getHistoryRooms();
-                if (rooms == null || rooms.size() == 0) {
-                } else {
-                    for (EntityBareJid room : rooms) {
-                        historyRoomData.add("" + room.toString());
-                    }
-                }
-                roomAdaper.notifyDataSetChanged();
-                return null;
+            protected List<EntityBareJid> doInBackground(Object[] objects) {
+                List<EntityBareJid> rooms = tools.getAllRooms();
+                return rooms;
             }
 
             @Override
             protected void onPostExecute(Object o) {
+                List<EntityBareJid> rooms = (List<EntityBareJid>)o;
+                if (rooms != null && rooms.size()>0){
+                    historyRoomData.addAll(rooms);
+                }
+                roomAdaper.notifyDataSetChanged();
                 roomMsgView.setText("群消息显示在这里...");
             }
         };
@@ -326,12 +333,10 @@ public class ChatActivity extends Activity implements View.OnClickListener{
          * @param context
          */
         private void initRoomView(Context context) {
-//            List<EntityBareJid> rooms = tools.getAllRooms();
-            historyRoomData = new ArrayList<>();
             historyRooms.setOnItemLongClickListener(joinRoomListener);
             roomAdaper = new ArrayAdapter<>(context, R.layout.support_simple_spinner_dropdown_item, historyRoomData);
+            historyRooms.setAdapter(roomAdaper);
             roomTask.execute();
-
         }
     }
 
@@ -373,4 +378,5 @@ public class ChatActivity extends Activity implements View.OnClickListener{
             return null;
         }
     }
+
 }

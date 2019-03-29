@@ -13,11 +13,10 @@ import im.hrgroup.com.hrsmack.util.HRCallBack;
  * Created by 18515 on 2019/3/28.
  */
 
-public class HRMessageListener implements MessageListener {
-    private StringBuilder sb ;
+public class HRRoomMessageListener implements MessageListener {
+    private StringBuilder sb = new StringBuilder() ;
     private HRCallBack callBack;
-    public HRMessageListener(StringBuilder sb,HRCallBack callBack){
-        this.sb = sb;
+    public HRRoomMessageListener(HRCallBack callBack){
         this.callBack = callBack;
     }
     @Override
@@ -33,5 +32,9 @@ public class HRMessageListener implements MessageListener {
         if (callBack != null) {
             callBack.doCallBack(sb.toString());
         }
+    }
+
+    public String showMessage() {
+        return sb.toString();
     }
 }

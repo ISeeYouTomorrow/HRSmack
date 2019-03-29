@@ -64,4 +64,8 @@ public class HRChatMessageListener implements IncomingChatMessageListener,Outgoi
             callBack.doCallBack(sb.toString());
         }
     }
+
+    public String showMessage() {
+        return sb.toString();
+    }
 }

@@ -49,37 +49,6 @@
     </LinearLayout>
 
     <LinearLayout
-        android:id="@+id/roomChatShow"
-        android:visibility="gone"
-        android:padding="@dimen/activity_horizontal_margin"
-        android:layout_width="match_parent"
-        android:orientation="vertical"
-        android:layout_height="wrap_content">
-
-        <android.support.design.widget.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <EditText
-                android:id="@+id/room_send_msg"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="群消息"
-                android:inputType="text"
-                android:maxLines="1"
-                android:singleLine="true" />
-
-        </android.support.design.widget.TextInputLayout>
-
-        <Button
-            android:id="@+id/sendRoomMsgBtn"
-            android:text="发送群消息"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-    </LinearLayout>
-
-    <LinearLayout
         android:padding="@dimen/activity_horizontal_margin"
         android:orientation="horizontal"
         android:layout_width="match_parent"
@@ -88,23 +57,51 @@
             android:id="@+id/historyRooms"
             android:layout_weight="1"
             android:layout_width="0dp"
+            android:background="@drawable/selector_listview"
             android:layout_height="wrap_content">
         </ListView>
 
-        <ScrollView
-            android:layout_width="0dp"
+        <LinearLayout
+            android:id="@+id/roomChatShow"
+            android:padding="@dimen/activity_horizontal_margin"
             android:layout_weight="1"
-            android:layout_height="match_parent">
-            <LinearLayout
+            android:layout_width="0dp"
+            android:orientation="vertical"
+            android:layout_height="wrap_content">
+
+            <android.support.design.widget.TextInputLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-                <TextView
-                    android:id="@+id/roomMsg"
+                android:layout_height="match_parent">
+                <EditText
+                    android:id="@+id/room_send_msg"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    />
-            </LinearLayout>
-        </ScrollView>
+                    android:hint="群消息"
+                    android:inputType="text"
+                    android:maxLines="1"
+                    android:singleLine="true" />
+
+            </android.support.design.widget.TextInputLayout>
+
+            <Button
+                android:id="@+id/sendRoomMsgBtn"
+                android:text="发送群消息"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:id="@+id/roomMsg"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        />
+                </LinearLayout>
+            </ScrollView>
+        </LinearLayout>
     </LinearLayout>
 
 </LinearLayout>
